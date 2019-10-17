@@ -63,10 +63,7 @@ dropS i a@(x :> xs)
 
 -- | Do take and drop simultaneous.
 splitAtS :: Int -> Stream a -> ([a], Stream a)
-splitAtS n xall@(x :> xs)
-  | n == 0 = ([], xall)
-  | otherwise = (x:xs', s')
-    where (xs', s') = splitAtS (n - 1) xs
+splitAtS n xs = (takeS n xs, dropS n xs)
 
 -- | Combine two streams with a function.
 zipWithS :: (a -> b -> c) -> Stream a -> Stream b -> Stream c
