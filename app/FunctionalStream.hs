@@ -1,3 +1,5 @@
+module FunctionalStream where
+
 import Control.Arrow
 import Control.Applicative
 

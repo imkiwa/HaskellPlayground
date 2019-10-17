@@ -3,7 +3,7 @@
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE FlexibleInstances #-}
 
-module PolyvariadicFunctions where
+module PolyvariadicFunction where
 
 class AddResult r where
   polyAdd' :: Int -> r
