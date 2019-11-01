@@ -3,4 +3,4 @@ module Main where
 import Lib
 
 main :: IO ()
-main = print e
+main = say [Nothing :: Maybe Int]
