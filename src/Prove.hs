@@ -24,22 +24,32 @@ type family (:+:) (n :: *) (m :: *) :: *
 type instance Z :+: m = m
 type instance S n :+: m = S (n :+: m)
 
+-- | For any n, n = n.
+reflexive :: Natural n -> Equal n n
+reflexive NumZ = EqlZ
+reflexive (NumS n) = EqlS (reflexive n)
+
+-- | if a = b, then b = a.
+symmetric :: Equal a b -> Equal b a
+symmetric EqlZ = EqlZ
+symmetric (EqlS n) = EqlS $ symmetric n
+
 -- | if a = b and b = c, then a = c.
 transitive :: Equal a b -> Equal b c -> Equal a c
 transitive EqlZ EqlZ = EqlZ
-transitive (EqlS e1) (EqlS e2) = EqlS $ transitive e1 e2
+transitive (EqlS m) (EqlS n) = EqlS $ transitive m n
 
--- | a + (b ++) = (a + b) ++
-lemma :: Natural m -> Natural n -> Equal (m :+: S n) (S (m :+: n))
-lemma NumZ NumZ = EqlS EqlZ
-lemma NumZ (NumS n) = EqlS $ lemma NumZ n
-lemma (NumS m) n = EqlS $ lemma m n
+-- | (a + b) + 1 = a + (b + 1)
+helper :: Natural a -> Natural b -> Equal (S (a :+: b)) (a :+: S b)
+helper NumZ n = EqlS (reflexive n)
+helper (NumS m) n = EqlS (helper m n)
 
--- | a + zero = zero + a
--- | a + (b ++) = (a + b) ++
--- | (b ++) + a = (b + a) ++
--- | then a + b = b + a
+-- This is the proof that the kata requires.
+-- | a + 0 = 0 + a
+-- | a + (b + 1) = (a + b) + 1
+-- | (b + 1) + a = (b + a) + 1
+-- | => a + b = b + a
 plusCommutes :: Natural a -> Natural b -> Equal (a :+: b) (b :+: a)
 plusCommutes NumZ NumZ = EqlZ
-plusCommutes (NumS m) NumZ = EqlS $ plusCommutes m NumZ
-plusCommutes m (NumS n) = transitive (lemma m n) $ EqlS $ plusCommutes m n
+plusCommutes NumZ (NumS n) = EqlS $ plusCommutes NumZ n
+plusCommutes (NumS m) n = transitive (EqlS $ plusCommutes m n) (helper n m)
