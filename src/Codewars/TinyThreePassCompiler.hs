@@ -95,7 +95,7 @@ type PartialParseFunc = [Token] -> ([AST -> AST], [Token])
 -- |                | node op2 factor
 parsePrioritized :: [Token] -> ArgList -> [Token] -> ParseFunc -> ParseData
 parsePrioritized tokens args ops parseFunc = (ast, args, restTokens)
-  where (factor, _, r)               = parseFunc tokens args
+  where (factor, _, r)          = parseFunc tokens args
         (nodeCtors, restTokens) = (doIfMatch ops parseFunc) r
         ast                     = foldl (flip id) factor nodeCtors
 
@@ -123,12 +123,11 @@ parseFactor (TStr variable : xs) args = (Arg (indexOf variable args), args, xs)
 parseFactor (TChar '(' : xs)     args = (node, args, tail rest)
   where (node, _, rest) = parseExpr xs args
 
-genTree :: [Token] -> AST
-
--- | Function params
+extractVarName :: Token -> String
 extractVarName (TStr str) = str
 extractVarName _ = error "Unexpected variable name"
 
+genTree :: [Token] -> AST
 genTree tokens = ast
   where (TChar '[' : paramTokens, TChar ']' : bodyTokens) = break (== TChar ']') tokens
         args = map extractVarName paramTokens
