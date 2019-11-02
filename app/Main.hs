@@ -13,7 +13,11 @@ mainLoop = forever $ do
     Nothing -> return ()
     Just ":q" -> return ()
     Just input -> do
-      forM_ (compileIR input) (outputStrLn . show)
+      let ir = compileIR input
+      (outputStrLn . show . pass2 . pass1) input
+      forM_ ir (outputStrLn . show)
+      (outputStrLn . ("runIR  = " ++) . show . vmR0) $ runIR ir [1..]
+      (outputStrLn . ("runIR' = " ++) . show . vmR0) $ runIR' ir [1..]
 
 main :: IO ()
 main = runInputT defaultSettings mainLoop

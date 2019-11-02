@@ -2,6 +2,8 @@
 
 module Codewars.TinyThreePassCompiler where
 
+import Data.List (foldl')
+
 -- | The programming language has this syntax:
 -- |
 -- |   function   ::= '[' arg-list ']' expression
@@ -282,16 +284,52 @@ type R1 = Int
 data VM = VM {
   vmR0      :: R0,
   vmR1      :: R1,
-  vmStack   :: [Int],
-  vmIR      :: [IR]
-}
+  vmStack   :: [Int]
+} deriving (Show)
 
 createVM :: VM
-createVM = VM {vmR0 = 0, vmR1 = 0, vmStack = [], vmIR = []}
+createVM = VM {vmR0 = 0, vmR1 = 0, vmStack = []}
 
-runIR :: [IR] -> VM
-runIR ir = vmRunLoop (createVM {vmIR = ir})
+runIR :: [IR] -> [Int] -> VM
+runIR = vmRunLoop createVM
 
-vmRunLoop :: VM -> VM
-vmRunLoop vm = undefined
+vmPush :: VM -> Int -> VM
+vmPush vm n = vm {vmStack = n : (vmStack vm)}
 
+vmPop :: VM -> VM
+vmPop vm = pop
+  where (top : rest) = vmStack vm
+        pop          = vm {vmStack = rest, vmR0 = top}
+
+vmMath :: VM -> Op -> VM
+vmMath vm op = vm {vmR0 = result}
+  where lhs = vmR0 vm
+        rhs = vmR1 vm
+        result = op lhs rhs
+
+vmRunLoop :: VM -> [IR] -> [Int] -> VM
+vmRunLoop vm [] _ = vm
+vmRunLoop vm ((IMM n) : irs) args = vmRunLoop (vm {vmR0 = n}) irs args
+vmRunLoop vm ((ARG n) : irs) args = vmRunLoop (vm {vmR0 = args !! n}) irs args
+vmRunLoop vm (SWAP : irs) args    = vmRunLoop (vm {vmR0 = vmR1 vm, vmR1 = vmR0 vm}) irs args
+vmRunLoop vm (PUSH : irs) args    = vmRunLoop (vmPush vm (vmR0 vm)) irs args
+vmRunLoop vm (POP : irs) args     = vmRunLoop (vmPop vm) irs args
+vmRunLoop vm (ADD : irs) args     = vmRunLoop (vmMath vm (+)) irs args
+vmRunLoop vm (SUB : irs) args     = vmRunLoop (vmMath vm (-)) irs args
+vmRunLoop vm (MUL : irs) args     = vmRunLoop (vmMath vm (*)) irs args
+vmRunLoop vm (DIV : irs) args     = vmRunLoop (vmMath vm (div)) irs args
+
+runIR' :: [IR] -> [Int] -> VM
+runIR' ir args = VM {vmR0 = r0, vmR1 = r1, vmStack = stack}
+  where (r0, r1, stack) = foldl' step (0, 0, []) ir
+        step (r0,r1,stack) ins =
+          case ins of
+            (IMM n) -> (n, r1, stack)
+            (ARG n) -> (args !! n, r1, stack)
+            SWAP    -> (r1, r0, stack)
+            PUSH    -> (r0, r1, r0:stack)
+            POP     -> (head stack, r1, tail stack)
+            ADD     -> (r0 + r1, r1, stack)
+            SUB     -> (r0 - r1, r1, stack)
+            MUL     -> (r0 * r1, r1, stack)
+            DIV     -> (r0 `div` r1, r1, stack)
