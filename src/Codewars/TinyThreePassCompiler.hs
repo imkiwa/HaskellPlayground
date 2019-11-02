@@ -2,6 +2,24 @@
 
 module Codewars.TinyThreePassCompiler where
 
+-- | The programming language has this syntax:
+-- |
+-- |   function   ::= '[' arg-list ']' expression
+-- |
+-- |   arg-list   ::= /* nothing */
+-- |                | variable arg-list
+-- |
+-- |   expression ::= term
+-- |                | expression '+' term
+-- |                | expression '-' term
+-- |
+-- |   term       ::= factor
+-- |                | term '*' factor
+-- |                | term '/' factor
+-- |
+-- |   factor     ::= number
+-- |                | variable
+-- |                | '(' expression ')'
 data AST = Imm Int
          | Arg Int
          | Add AST AST
@@ -10,16 +28,41 @@ data AST = Imm Int
          | Div AST AST
          deriving (Eq, Show, Read)
 
-data IR = IM Int
-        | AR Int
-        | SW
-        | PU
-        | PO
-        | AD
-        | SU
-        | MU
-        | DI
-        deriving (Eq, Show, Read)
+-- | The processor supports the following instructions:
+-- |
+-- |   "IM n"     // load the constant value n into R0
+-- |   "AR n"     // load the n-th input argument into R0
+-- |   "SW"       // swap R0 and R1
+-- |   "PU"       // push R0 onto the stack
+-- |   "PO"       // pop the top value off of the stack into R0
+-- |   "AD"       // add R1 to R0 and put the result in R0
+-- |   "SU"       // subtract R1 from R0 and put the result in R0
+-- |   "MU"       // multiply R0 by R1 and put the result in R0
+-- |   "DI"       // divide R0 by R1 and put the result in R0
+-- |
+data IR = IMM Int
+        | ARG Int
+        | SWAP
+        | PUSH
+        | POP
+        | ADD
+        | SUB
+        | MUL
+        | DIV
+        deriving (Eq, Read)
+
+-- | According to the kate
+instance Show IR where
+  show (ARG i) = "AR " ++ show i
+  show (IMM i) = "IM " ++ show i
+  show SWAP    = "SW"
+  show PUSH    = "PU"
+  show POP     = "PO"
+  show ADD     = "AD"
+  show SUB     = "SU"
+  show MUL     = "MU"
+  show DIV     = "DI"
+
 
 data Token = TChar Char
            | TInt Int
@@ -64,25 +107,6 @@ pass3IR = codegen
 
 -- | Phase 1:
 -- | This phase will build an AST from tokens.
--- | The programming language has this syntax:
-
--- |   function   ::= '[' arg-list ']' expression
--- |
--- |   arg-list   ::= /* nothing */
--- |                | variable arg-list
--- |
--- |   expression ::= term
--- |                | expression '+' term
--- |                | expression '-' term
--- |
--- |   term       ::= factor
--- |                | term '*' factor
--- |                | term '/' factor
--- |
--- |   factor     ::= number
--- |                | variable
--- |                | '(' expression ')'
-
 type ArgList = [String]
 type ParseData = (AST, ArgList, [Token])
 
@@ -177,17 +201,6 @@ foldConstants ctor _ astL astR = ctor astL astR
 -- | You are working on a small processor with two registers (R0 and R1),
 -- | a stack, and an array of input arguments.
 -- | The result of a function is expected to be in R0.
--- | The processor supports the following instructions:
--- |
--- |   "IM n"     // load the constant value n into R0
--- |   "AR n"     // load the n-th input argument into R0
--- |   "SW"       // swap R0 and R1
--- |   "PU"       // push R0 onto the stack
--- |   "PO"       // pop the top value off of the stack into R0
--- |   "AD"       // add R1 to R0 and put the result in R0
--- |   "SU"       // subtract R1 from R0 and put the result in R0
--- |   "MU"       // multiply R0 by R1 and put the result in R0
--- |   "DI"       // divide R0 by R1 and put the result in R0
 -- |
 -- | Register flow notion:
 -- |   x -> r     // write x to r
@@ -196,14 +209,14 @@ foldConstants ctor _ astL astR = ctor astL astR
 codegen :: AST -> [IR]
 
 -- | * -> R0
-codegen (Imm x) = [IM x]
-codegen (Arg n) = [AR n]
+codegen (Imm x) = [IMM x]
+codegen (Arg n) = [ARG n]
 
 -- | R0 (op) R1 -> R0
-codegen (Add astL astR) = genCommutableIR AD astL astR
-codegen (Sub astL astR) = genIR SU astL astR
-codegen (Mul astL astR) = genCommutableIR MU astL astR
-codegen (Div astL astR) = genIR DI astL astR
+codegen (Add astL astR) = genCommutableIR ADD astL astR
+codegen (Sub astL astR) = genIR SUB astL astR
+codegen (Mul astL astR) = genCommutableIR MUL astL astR
+codegen (Div astL astR) = genIR DIV astL astR
 
 -- | Calculate astL (op) astR
 -- |
@@ -214,14 +227,14 @@ codegen (Div astL astR) = genIR DI astL astR
 -- |        stack -> R0
 -- | call op
 genIR :: IR -> AST -> AST -> [IR]
-genIR ir astL astR = concat [codeAstL, [PU], codeAstR, [SW], [PO], [ir]]
-  where gen ast = codegen ast
+genIR ir astL astR = concat [codeAstL, [PUSH], codeAstR, [SWAP], [POP], [ir]]
+  where gen = codegen
         codeAstL = gen astL
         codeAstR = gen astR
 
 -- | Generate code for operand-order-insensitive instructions
 genCommutableIR :: IR -> AST -> AST -> [IR]
-genCommutableIR ir astL astR = concat [codeAstL, [SW], codeAstR, [ir]]
-  where gen ast = codegen ast
+genCommutableIR ir astL astR = concat [codeAstL, [SWAP], codeAstR, [ir]]
+  where gen = codegen
         codeAstL = gen astL
         codeAstR = gen astR
