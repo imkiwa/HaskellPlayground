@@ -119,16 +119,18 @@ codegen (Arg n) = [AR n]
 
 -- | Calculate astL (op) astR
 -- |
--- | pass3 astL -> R0
--- |         R0 -> stack
--- | pass3 astR -> R0
--- |         R0 -> R1
--- |      stack -> R0
+-- | codegen astL -> R0
+-- |           R0 -> stack
+-- | codegen astR -> R0
+-- |           R0 -> R1
+-- |        stack -> R0
 -- | call op
 
 -- | -> R0
-codegen (Add astL astR) = foldl (++) [] [(codegen astL), [PU], (codegen astR), [SW, PO], [AD]]
-codegen (Sub astL astR) = foldl (++) [] [(codegen astL), [PU], (codegen astR), [SW, PO], [SU]]
-codegen (Mul astL astR) = foldl (++) [] [(codegen astL), [PU], (codegen astR), [SW, PO], [MU]]
-codegen (Div astL astR) = foldl (++) [] [(codegen astL), [PU], (codegen astR), [SW, PO], [DI]]
+codegen (Add astL astR) = codegenFactory AD astL astR
+codegen (Sub astL astR) = codegenFactory SU astL astR
+codegen (Mul astL astR) = codegenFactory MU astL astR
+codegen (Div astL astR) = codegenFactory DI astL astR
 
+codegenFactory :: IR -> AST -> AST -> [IR]
+codegenFactory ir astL astR = foldl (++) [] [(codegen astL), [PU], (codegen astR), [SW, PO], [ir]]
