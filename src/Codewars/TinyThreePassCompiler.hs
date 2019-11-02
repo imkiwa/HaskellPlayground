@@ -201,9 +201,9 @@ codegen (Imm x) = [IM x]
 codegen (Arg n) = [AR n]
 
 -- | R0 (op) R1 -> R0
-codegen (Add astL astR) = genIR AD astL astR
+codegen (Add astL astR) = genCommutableIR AD astL astR
 codegen (Sub astL astR) = genIR SU astL astR
-codegen (Mul astL astR) = genIR MU astL astR
+codegen (Mul astL astR) = genCommutableIR MU astL astR
 codegen (Div astL astR) = genIR DI astL astR
 
 -- | Calculate astL (op) astR
@@ -216,6 +216,13 @@ codegen (Div astL astR) = genIR DI astL astR
 -- | call op
 genIR :: IR -> AST -> AST -> [IR]
 genIR ir astL astR = concat [codeAstL, [PU], codeAstR, [SW], [PO], [ir]]
+  where gen ast = codegen ast
+        codeAstL = gen astL
+        codeAstR = gen astR
+
+-- | Generate code for operand-order-insensitive instructions
+genCommutableIR :: IR -> AST -> AST -> [IR]
+genCommutableIR ir astL astR = concat [codeAstL, [SW], codeAstR, [ir]]
   where gen ast = codegen ast
         codeAstL = gen astL
         codeAstR = gen astR

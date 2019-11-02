@@ -1,21 +1,19 @@
 module Main where
 
+import System.Console.Haskeline
+import Control.Monad (forM_, forever)
+
+import Codewars.TinyThreePassCompiler
 import Lib
 
-insert :: Eq a => a -> [a] -> [[a]]
-insert n [] = [[n]]
-insert n (nh : nt) = (n : nh : nt) : [nh : nt' | nt' <- insert n nt]
-
-permutations' :: Eq a => [a] -> [[a]]
-permutations' [] = [[]]
-permutations' (x:xs) = concat [insert x rest | rest <- permutations xs]
-
-delete :: Eq a => a -> [a] -> [a]
-delete x xs = [ y | y <- xs, y /= x ]
-
-permutations :: Eq a => [a] -> [[a]]
-permutations [] = [[]]
-permutations xs = [ x : r | x <- xs, r <- permutations (delete x xs)]
+mainLoop :: InputT IO ()
+mainLoop = forever $ do
+  line <- getInputLine "> "
+  case line of
+    Nothing -> return ()
+    Just ":q" -> return ()
+    Just input -> do
+      forM_ (compileIR input) (outputStrLn . show)
 
 main :: IO ()
-main = putStrLn $ show $ permutations "aabb"
+main = runInputT defaultSettings mainLoop
