@@ -250,9 +250,9 @@ codegen (Imm x) = [IMM x]
 codegen (Arg n) = [ARG n]
 
 -- | R0 (op) R1 -> R0
-codegen (Add astL astR) = genCommutableIR ADD astL astR
+codegen (Add astL astR) = genIR ADD astL astR
 codegen (Sub astL astR) = genIR SUB astL astR
-codegen (Mul astL astR) = genCommutableIR MUL astL astR
+codegen (Mul astL astR) = genIR MUL astL astR
 codegen (Div astL astR) = genIR DIV astL astR
 
 -- | Calculate astL (op) astR
@@ -269,13 +269,13 @@ genIR ir astL astR = concat [codeAstL, [PUSH], codeAstR, [SWAP], [POP], [ir]]
         codeAstL = gen astL
         codeAstR = gen astR
 
+-- | FIXME: fail with (Add (Sub (Imm 1) (Imm 1)) (Div (Imm 0) (Imm (-2))))
 -- | Generate code for operand-order-insensitive instructions
-genCommutableIR :: IR -> AST -> AST -> [IR]
-genCommutableIR ir astL astR = concat [codeAstL, [SWAP], codeAstR, [ir]]
-  where gen = codegen
-        codeAstL = gen astL
-        codeAstR = gen astR
-
+--genCommutableIR :: IR -> AST -> AST -> [IR]
+--genCommutableIR ir astL astR = concat [codeAstL, [SWAP], codeAstR, [ir]]
+--  where gen = codegen
+--        codeAstL = gen astL
+--        codeAstR = gen astR
 
 -- | The virtual machine
 type R0 = Int
