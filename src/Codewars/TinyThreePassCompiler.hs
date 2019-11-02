@@ -46,7 +46,7 @@ compileIR :: String -> [IR]
 compileIR = pass3 . pass2 . pass1
 
 pass1 :: String -> AST
-pass1 = parseTokens . tokenize
+pass1 = genTree . tokenize
 
 pass2 :: AST -> AST
 pass2 = optimize
@@ -54,8 +54,8 @@ pass2 = optimize
 pass3 :: AST -> [IR]
 pass3 = codegen
 
-parseTokens :: [Token] -> AST
-parseTokens = undefined
+genTree :: [Token] -> AST
+genTree = undefined
 
 -- | Phase 2:
 -- | This phase will take the output from genTree and return
@@ -83,9 +83,9 @@ foldConstants _ op (Imm lhs) (Imm rhs) = Imm (op lhs rhs)
 foldConstants ctor _ astL astR = ctor astL astR
 
 -- | Record my stupid mistake!!!
---foldConstants :: Op -> AST -> AST -> AST
---foldConstants op (Imm lhs) (Imm rhs) = Imm (op lhs rhs)
---foldConstants op astL astR = ctor astL astR
+--foldConstants' :: Op -> AST -> AST -> AST
+--foldConstants' op (Imm lhs) (Imm rhs) = Imm (op lhs rhs)
+--foldConstants' op astL astR = ctor astL astR
 --  where ctor = if | op == (+) -> Add
 --                  | op == (-) -> Sub
 --                  | op == (*) -> Mul
@@ -113,10 +113,11 @@ foldConstants ctor _ astL astR = ctor astL astR
 -- |   r1 <-> r2  // swap r1 r2
 codegen :: AST -> [IR]
 
--- | -> R0
+-- | * -> R0
 codegen (Imm x) = [IM x]
 codegen (Arg n) = [AR n]
--- | -> R0
+
+-- | R0 (op) R1 -> R0
 codegen (Add astL astR) = genIR AD astL astR
 codegen (Sub astL astR) = genIR SU astL astR
 codegen (Mul astL astR) = genIR MU astL astR
