@@ -2,7 +2,7 @@
 {-# LANGUAGE TypeFamilies  #-}
 {-# LANGUAGE TypeOperators #-}
 
-module Prove(plusCommutes) where
+module Codewars.ProvePlusAssoc(plusAssoc) where
 
 -- | The natural numbers.
 data Z
@@ -39,17 +39,18 @@ transitive :: Equal a b -> Equal b c -> Equal a c
 transitive EqlZ EqlZ = EqlZ
 transitive (EqlS m) (EqlS n) = EqlS $ transitive m n
 
--- | (a + b) + 1 = a + (b + 1)
-helper :: Natural a -> Natural b -> Equal (S (a :+: b)) (a :+: S b)
-helper NumZ n = EqlS (reflexive n)
-helper (NumS m) n = EqlS (helper m n)
+-- The plus
+-- | 0 + b = b
+-- | (a + 1) + b = (a + b) + 1
+plus :: Natural a -> Natural b -> Natural (a :+: b)
+plus NumZ b = b
+plus (NumS a) b = NumS $ plus a b
 
 -- This is the proof that the kata requires.
--- | a + 0 = 0 + a
+-- | (0 + a) + b = 0 + (a + b)
+-- | (a + 1) + b = (a + b) + 1
 -- | a + (b + 1) = (a + b) + 1
--- | (b + 1) + a = (b + a) + 1
--- | => a + b = b + a
-plusCommutes :: Natural a -> Natural b -> Equal (a :+: b) (b :+: a)
-plusCommutes NumZ NumZ = EqlZ
-plusCommutes NumZ (NumS n) = EqlS $ plusCommutes NumZ n
-plusCommutes (NumS m) n = transitive (EqlS $ plusCommutes m n) (helper n m)
+-- | => (a + b) + c = a + (b + c)
+plusAssoc :: Natural a -> Natural b -> Natural c -> Equal ((a :+: b) :+: c) (a :+: (b :+: c))
+plusAssoc NumZ a b = reflexive $ plus a b
+plusAssoc (NumS n) a b = EqlS $ plusAssoc n a b

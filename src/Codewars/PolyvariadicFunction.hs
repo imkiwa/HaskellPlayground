@@ -3,7 +3,7 @@
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE FlexibleInstances #-}
 
-module PolyvariadicFunction where
+module Codewars.PolyvariadicFunction where
 
 class AddResult r where
   polyAdd' :: Int -> r

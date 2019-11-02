@@ -1,6 +1,6 @@
 {-# LANGUAGE FlexibleInstances #-}
 
-module VariadicAdd where
+module Codewars.VariadicAdd where
 
 class SuperAdd t where
   plus :: Integer -> t

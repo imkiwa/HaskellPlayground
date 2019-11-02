@@ -1,4 +1,4 @@
-module FunctionalStream where
+module Codewars.FunctionalStream where
 
 import Control.Arrow
 import Control.Applicative
