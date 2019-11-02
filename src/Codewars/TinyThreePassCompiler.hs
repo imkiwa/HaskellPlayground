@@ -201,6 +201,17 @@ foldConstants ctor _ ast i@(Imm 0) = let test = ctor ast i
                                           (Mul _ _) -> Imm 0
                                           otherwise -> test
 
+-- | Fold (1 op *) and (* op 1)
+foldConstants ctor _ i@(Imm 1) ast = let test = ctor i ast
+                                      in case test of
+                                          (Mul _ _) -> ast
+                                          otherwise -> test
+foldConstants ctor _ ast i@(Imm 1) = let test = ctor ast i
+                                      in case test of
+                                          (Mul _ _) -> ast
+                                          (Div _ _) -> ast
+                                          otherwise -> test
+
 -- | Fold (x - x) to 0
 foldConstants ctor _ l@(Arg lhs) r@(Arg rhs)
   | lhs == rhs = let test = ctor l r
