@@ -177,14 +177,38 @@ optimize :: AST -> AST
 optimize c@(Imm _) = c
 optimize c@(Arg _) = c
 -- | Foreach sub-AST, recursively call foldConstants on the result of `pass2 sub-AST`
-optimize (Add astL astR) = foldConstants Add (+) (pass2 astL) (pass2 astR)
-optimize (Sub astL astR) = foldConstants Sub (-) (pass2 astL) (pass2 astR)
-optimize (Mul astL astR) = foldConstants Mul (*) (pass2 astL) (pass2 astR)
-optimize (Div astL astR) = foldConstants Div div (pass2 astL) (pass2 astR)
+optimize (Add astL astR) = foldConstants Add (+) (optimize astL) (optimize astR)
+optimize (Sub astL astR) = foldConstants Sub (-) (optimize astL) (optimize astR)
+optimize (Mul astL astR) = foldConstants Mul (*) (optimize astL) (optimize astR)
+optimize (Div astL astR) = foldConstants Div div (optimize astL) (optimize astR)
 
+-- | Fold constants to reduce tree size
 foldConstants :: TreeCtor -> Op -> AST -> AST -> AST
+
 -- | Fold two Imm into an Imm if both sides are Imm
 foldConstants _ op (Imm lhs) (Imm rhs) = Imm (op lhs rhs)
+
+-- | Fold (0 op *) and (* op 0)
+foldConstants ctor _ i@(Imm 0) ast = let test = ctor i ast
+                                      in case test of
+                                          (Add _ _) -> ast
+                                          (Mul _ _) -> Imm 0
+                                          (Div _ _) -> Imm 0
+                                          otherwise -> test
+foldConstants ctor _ ast i@(Imm 0) = let test = ctor ast i
+                                      in case test of
+                                          (Add _ _) -> ast
+                                          (Mul _ _) -> Imm 0
+                                          otherwise -> test
+
+-- | Fold (x - x) to 0
+foldConstants ctor _ l@(Arg lhs) r@(Arg rhs)
+  | lhs == rhs = let test = ctor l r
+                 in case test of
+                      (Sub _ _) -> Imm 0
+                      otherwise -> test
+  | otherwise  = ctor l r
+
 -- | Otherwise, do nothing
 foldConstants ctor _ astL astR = ctor astL astR
 
@@ -238,3 +262,25 @@ genCommutableIR ir astL astR = concat [codeAstL, [SWAP], codeAstR, [ir]]
   where gen = codegen
         codeAstL = gen astL
         codeAstR = gen astR
+
+
+-- | The virtual machine
+type R0 = Int
+type R1 = Int
+
+data VM = VM {
+  vmR0      :: R0,
+  vmR1      :: R1,
+  vmStack   :: [Int],
+  vmIR      :: [IR]
+}
+
+createVM :: VM
+createVM = VM {vmR0 = 0, vmR1 = 0, vmStack = [], vmIR = []}
+
+runIR :: [IR] -> VM
+runIR ir = vmRunLoop (createVM {vmIR = ir})
+
+vmRunLoop :: VM -> VM
+vmRunLoop vm = undefined
+
