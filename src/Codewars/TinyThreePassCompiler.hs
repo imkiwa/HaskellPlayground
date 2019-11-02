@@ -1,3 +1,5 @@
+{-# LANGUAGE MultiWayIf #-}
+
 module Codewars.TinyThreePassCompiler where
 
 data AST = Imm Int
@@ -24,6 +26,9 @@ data Token = TChar Char
            | TStr String
            deriving (Eq, Show)
 
+type TreeCtor = AST -> AST -> AST
+type Op = Int -> Int -> Int
+
 alpha, digit :: String
 alpha = ['a'..'z'] ++ ['A'..'Z']
 digit = ['0'..'9']
@@ -40,10 +45,10 @@ tokenize xxs@(c:cs)
     (s, ss) = span (`elem` alpha) xxs
 
 compile :: String -> [String]
-compile = (map show) . pass3 . pass2 . pass1
+compile = pass3 . pass2 . pass1
 
 compileIR :: String -> [IR]
-compileIR = pass3 . pass2 . pass1
+compileIR = pass3IR . pass2 . pass1
 
 pass1 :: String -> AST
 pass1 = genTree . tokenize
@@ -51,20 +56,98 @@ pass1 = genTree . tokenize
 pass2 :: AST -> AST
 pass2 = optimize
 
-pass3 :: AST -> [IR]
-pass3 = codegen
+pass3 :: AST -> [String]
+pass3 = (map show) . pass3IR
+
+pass3IR :: AST -> [IR]
+pass3IR = codegen
+
+-- | Phase 1:
+-- | This phase will build an AST from tokens.
+-- | The programming language has this syntax:
+
+-- |   function   ::= '[' arg-list ']' expression
+-- |
+-- |   arg-list   ::= /* nothing */
+-- |                | variable arg-list
+-- |
+-- |   expression ::= term
+-- |                | expression '+' term
+-- |                | expression '-' term
+-- |
+-- |   term       ::= factor
+-- |                | term '*' factor
+-- |                | term '/' factor
+-- |
+-- |   factor     ::= number
+-- |                | variable
+-- |                | '(' expression ')'
+
+type ArgList = [String]
+type ParseData = (AST, ArgList, [Token])
+
+type ParseFunc = ([Token] -> ArgList -> ParseData)
+type PartialParseFunc = [Token] -> ([AST -> AST], [Token])
+
+-- | Helper parse factory for parsing ASTs like:
+-- |   node       ::= factor
+-- |                | node op1 factor
+-- |                | node op2 factor
+parsePrioritized :: [Token] -> ArgList -> [Token] -> ParseFunc -> ParseData
+parsePrioritized tokens args ops parseFunc = (ast, args, restTokens)
+  where (factor, _, r)               = parseFunc tokens args
+        (nodeCtors, restTokens) = (doIfMatch ops parseFunc) r
+        ast                     = foldl (flip id) factor nodeCtors
+
+        -- | Do ParseFunc if current token matches one of the [Token]
+        doIfMatch :: [Token] -> ParseFunc -> PartialParseFunc
+        doIfMatch _ _ [] = ([], [])
+        doIfMatch ops parseFunc (currentToken : rs)
+              | currentToken `elem` ops   = (flip nodeCtor subNode : nodeCtors, restTokens)
+              | otherwise                 = ([], currentToken : rs)
+                 where nodeCtor                 = mapOp currentToken
+                       (subNode, _, tokens)     = parseFunc rs args
+                       (nodeCtors, restTokens)  = doIfMatch ops parseFunc tokens
+
+parseExpr :: [Token] -> ArgList -> ParseData
+parseExpr [] _ = error "Unexpected EOF"
+parseExpr tokens args = parsePrioritized tokens args [TChar '+', TChar '-'] parseTerm
+
+parseTerm :: [Token] -> ArgList -> ParseData
+parseTerm tokens args = parsePrioritized tokens args [TChar '*', TChar '/'] parseFactor
+
+parseFactor :: [Token] -> ArgList -> ParseData
+parseFactor [] _ = error "Unexptected EOF"
+parseFactor (TInt number : xs)   args = (Imm number, args, xs)
+parseFactor (TStr variable : xs) args = (Arg (indexOf variable args), args, xs)
+parseFactor (TChar '(' : xs)     args = (node, args, tail rest)
+  where (node, _, rest) = parseExpr xs args
 
 genTree :: [Token] -> AST
-genTree = undefined
+
+-- | Function params
+extractVarName (TStr str) = str
+extractVarName _ = error "Unexpected variable name"
+
+genTree tokens = ast
+  where (TChar '[' : paramTokens, TChar ']' : bodyTokens) = break (== TChar ']') tokens
+        args = map extractVarName paramTokens
+        (ast, _, _) = parseExpr bodyTokens args
+
+mapOp :: Token -> AST -> AST -> AST
+mapOp (TChar '+') = Add
+mapOp (TChar '-') = Sub
+mapOp (TChar '*') = Mul
+mapOp (TChar '/') = Div
+
+indexOf :: Eq a => a -> [a] -> Int
+indexOf x xs = length (takeWhile (/= x) xs)
 
 -- | Phase 2:
 -- | This phase will take the output from genTree and return
 -- | a new AST (with the same format) with all constant
 -- | expressions reduced as much as possible.
 optimize :: AST -> AST
-
-type TreeCtor = AST -> AST -> AST
-type Op = (Int -> Int -> Int)
 
 -- | Imm and Arg don't need constant folding.
 -- | They are already **constants**
