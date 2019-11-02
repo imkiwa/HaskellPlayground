@@ -8,7 +8,7 @@ import Lib
 
 mainLoop :: InputT IO ()
 mainLoop = forever $ do
-  line <- getInputLine "> "
+  line <- getInputLine "TinyCompiler> "
   case line of
     Nothing -> return ()
     Just ":q" -> return ()
