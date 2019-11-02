@@ -40,7 +40,10 @@ tokenize xxs@(c:cs)
     (s, ss) = span (`elem` alpha) xxs
 
 compile :: String -> [String]
-compile = pass3 . pass2 . pass1
+compile = (map show) . pass3 . pass2 . pass1
+
+compileIR :: String -> [IR]
+compileIR = pass3 . pass2 . pass1
 
 pass1 :: String -> AST
 pass1 = parseTokens . tokenize
@@ -48,8 +51,8 @@ pass1 = parseTokens . tokenize
 pass2 :: AST -> AST
 pass2 = optimize
 
-pass3 :: AST -> [String]
-pass3 ast = map show $ codegen ast
+pass3 :: AST -> [IR]
+pass3 = codegen
 
 parseTokens :: [Token] -> AST
 parseTokens = undefined
