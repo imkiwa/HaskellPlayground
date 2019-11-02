@@ -58,8 +58,8 @@ parseTokens :: [Token] -> AST
 parseTokens = undefined
 
 -- | Phase 2:
--- | This phase will take the output from genTree and return 
--- | a new AST (with the same format) with all constant 
+-- | This phase will take the output from genTree and return
+-- | a new AST (with the same format) with all constant
 -- | expressions reduced as much as possible.
 optimize :: AST -> AST
 
@@ -116,6 +116,11 @@ codegen :: AST -> [IR]
 -- | -> R0
 codegen (Imm x) = [IM x]
 codegen (Arg n) = [AR n]
+-- | -> R0
+codegen (Add astL astR) = genIR AD astL astR
+codegen (Sub astL astR) = genIR SU astL astR
+codegen (Mul astL astR) = genIR MU astL astR
+codegen (Div astL astR) = genIR DI astL astR
 
 -- | Calculate astL (op) astR
 -- |
@@ -125,12 +130,8 @@ codegen (Arg n) = [AR n]
 -- |           R0 -> R1
 -- |        stack -> R0
 -- | call op
-
--- | -> R0
-codegen (Add astL astR) = codegenFactory AD astL astR
-codegen (Sub astL astR) = codegenFactory SU astL astR
-codegen (Mul astL astR) = codegenFactory MU astL astR
-codegen (Div astL astR) = codegenFactory DI astL astR
-
-codegenFactory :: IR -> AST -> AST -> [IR]
-codegenFactory ir astL astR = foldl (++) [] [(codegen astL), [PU], (codegen astR), [SW, PO], [ir]]
+genIR :: IR -> AST -> AST -> [IR]
+genIR ir astL astR = concat [codeAstL, [PU], codeAstR, [SW], [PO], [ir]]
+  where gen ast = codegen ast
+        codeAstL = gen astL
+        codeAstR = gen astR
